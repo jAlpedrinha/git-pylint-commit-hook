@@ -5,13 +5,19 @@ import re
 import sys
 import subprocess
 import collections
-from configparser import ConfigParser
+import configparser
 
+from builtins import bytes
 
 ExecutionResult = collections.namedtuple(
     'ExecutionResult',
     'status, stdout, stderr'
 )
+
+def _futurize_str(obj):
+  if isinstance(obj, bytes):
+    obj = obj.decode('utf-8')
+  return obj
 
 
 def _execute(cmd):
@@ -40,7 +46,7 @@ def _get_list_of_committed_files():
     output = subprocess.check_output(
         diff_index_cmd.split()
     )
-    for result in output.decode('utf-8', 'ignore').split('\n'):
+    for result in _futurize_str(output).split('\n'):
         if result != '':
             result = result.split()
             if result[4] in ['A', 'M']:
@@ -75,7 +81,7 @@ def _parse_score(pylint_output):
 
     """
     for line in pylint_output.splitlines():
-        match = re.match(_SCORE_REGEXP, line)
+        match = re.match(_SCORE_REGEXP, _futurize_str(line))
         if match:
             return float(match.group(1))
     return 0.0
@@ -118,7 +124,7 @@ def check_repo(
 
     # Load any pre-commit-hooks options from a .pylintrc file (if there is one)
     if os.path.exists(pylintrc):
-        conf = ConfigParser.SafeConfigParser()
+        conf = configparser.SafeConfigParser()
         conf.read(pylintrc)
         if conf.has_option('pre-commit-hook', 'command'):
             pylint = conf.get('pre-commit-hook', 'command')
@@ -147,7 +153,6 @@ def check_repo(
         sys.stdout.flush()
         try:
             command = [pylint]
-
             if pylint_params:
                 command += pylint_params.split()
                 if '--rcfile' not in pylint_params:
@@ -155,13 +160,12 @@ def check_repo(
             else:
                 command.append('--rcfile={}'.format(pylintrc))
 
-
             command.append(python_file)
-
             proc = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
+
             out, _ = proc.communicate()
         except OSError:
             print("\nAn error occurred. Is pylint installed?")
@@ -185,8 +189,7 @@ def check_repo(
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE)
                 out, _ = proc.communicate()
-            print(out)
-
+            print(_futurize_str(out))
 
         # Bump parsed files
         i += 1
