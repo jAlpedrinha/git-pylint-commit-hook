@@ -5,7 +5,7 @@ import re
 import sys
 import subprocess
 import collections
-import ConfigParser
+from configparser import ConfigParser
 
 
 ExecutionResult = collections.namedtuple(
@@ -40,7 +40,7 @@ def _get_list_of_committed_files():
     output = subprocess.check_output(
         diff_index_cmd.split()
     )
-    for result in output.split('\n'):
+    for result in output.decode('utf-8', 'ignore').split('\n'):
         if result != '':
             result = result.split()
             if result[4] in ['A', 'M']:
@@ -109,8 +109,8 @@ def check_repo(
             if _is_python_file(filename):
                 python_files.append((filename, None))
         except IOError:
-            print 'File not found (probably deleted): {}\t\tSKIPPED'.format(
-                filename)
+            print('File not found (probably deleted): {}\t\tSKIPPED'.format(
+                filename))
 
     # Don't do anything if there are no Python files
     if len(python_files) == 0:
@@ -185,7 +185,7 @@ def check_repo(
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE)
                 out, _ = proc.communicate()
-            print out
+            print(out)
 
 
         # Bump parsed files
